@@ -26,7 +26,7 @@ public class Master implements Closeable, Watcher {
                 zookeeper.create(zkConfig.getContext(), zkConfig.getPayload().getBytes(StandardCharsets.UTF_8), OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
                 return true;
             } catch (KeeperException.ConnectionLossException e) {
-
+                // Should check if we received the master's key....
             } catch (KeeperException.NodeExistsException e) {
                 if (zkConfig.isBlocking()) {
                     try {
@@ -39,6 +39,13 @@ public class Master implements Closeable, Watcher {
                 } else {
                     retries = 0;
                 }
+            } catch (KeeperException.SessionExpiredException e) {
+                try {
+                    zookeeper.close();
+                } catch (InterruptedException ex) {
+                    Thread.interrupted();
+                }
+                zookeeper = new ZooKeeper(zkConfig.getServers(), zkConfig.getTimeout(), this);
             } catch (KeeperException | InterruptedException e) {
                 e.printStackTrace();
             }
