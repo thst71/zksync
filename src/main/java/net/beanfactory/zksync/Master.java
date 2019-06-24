@@ -34,6 +34,8 @@ public class Master implements Closeable, Watcher {
                         System.err.printf("retries left: %02d\n", retries - 1);
                         retries--;
                     } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        retries = 0;
                         ex.printStackTrace();
                     }
                 } else {
@@ -43,11 +45,16 @@ public class Master implements Closeable, Watcher {
                 try {
                     zookeeper.close();
                 } catch (InterruptedException ex) {
-                    Thread.interrupted();
+                    Thread.currentThread().interrupt();
+                    retries = 0;
                 }
                 zookeeper = new ZooKeeper(zkConfig.getServers(), zkConfig.getTimeout(), this);
-            } catch (KeeperException | InterruptedException e) {
+            } catch (KeeperException e) {
                 e.printStackTrace();
+                throw new RuntimeException("uh oh, what should I do...", e);
+            } catch(InterruptedException e) {
+                Thread.currentThread().interrupt();
+                retries = 0;
             }
         }
         System.err.println();
